@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Ganti dengan path absolut ke file di GitHub Anda -->
     <link rel="shortcut icon" type="image/x-icon" href="https://raw.githubusercontent.com/faisaljuniardi/wolesfc-point/main/favicon.ico">
     <title>Woles FC</title>
     <style>
@@ -57,21 +56,6 @@
             max-height: 100%;
             max-width: 100%;
             object-fit: contain;
-            border-radius: 8px;
-        }
-        
-        .fallback-logo {
-            height: 50px;
-            width: 50px;
-            background: linear-gradient(135deg, #fdbb2d, #b21f1f);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            font-size: 12px;
-            text-align: center;
         }
         
         h1 {
@@ -128,57 +112,23 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            min-width: 600px; /* Diperkecil dari 800px */
+            min-width: 800px;
         }
         
         th {
             background: linear-gradient(to bottom, #4a6491, #2c3e50);
             color: white;
-            padding: 12px 8px; /* Padding diperkecil */
+            padding: 15px 12px;
             text-align: center;
             font-weight: 600;
             position: sticky;
             top: 0;
-            font-size: 0.9rem; /* Font size diperkecil */
         }
         
         td {
-            padding: 10px 8px; /* Padding diperkecil */
+            padding: 12px;
             text-align: center;
             border-bottom: 1px solid #dee2e6;
-            font-size: 0.9rem; /* Font size diperkecil */
-        }
-        
-        /* Atur lebar kolom spesifik */
-        th:nth-child(1), /* Peringkat */
-        td:nth-child(1) {
-            width: 80px; /* Lebar tetap untuk peringkat */
-            min-width: 80px;
-            max-width: 80px;
-        }
-        
-        th:nth-child(2), /* Nama Pemain */
-        td:nth-child(2) {
-            width: auto; /* Fleksibel untuk nama */
-            min-width: 150px;
-            text-align: left;
-            padding-left: 15px;
-        }
-        
-        th:nth-child(3), /* Total Poin */
-        td:nth-child(3) {
-            width: 100px; /* Lebar tetap untuk total poin */
-            min-width: 100px;
-            max-width: 100px;
-            font-weight: 700;
-        }
-        
-        /* Kolom mingguan - lebih sempit */
-        th:nth-child(n+4), /* Minggu 1-4 */
-        td:nth-child(n+4) {
-            width: 70px; /* Lebar tetap untuk poin mingguan */
-            min-width: 70px;
-            max-width: 70px;
         }
         
         tr:nth-child(even) {
@@ -255,53 +205,12 @@
             }
             
             th, td {
-                padding: 8px 6px;
-                font-size: 0.85rem;
+                padding: 10px 8px;
+                font-size: 0.9rem;
             }
             
             h1 {
                 font-size: 1.8rem;
-            }
-            
-            /* Lebar kolom lebih kecil di mobile */
-            th:nth-child(1),
-            td:nth-child(1) {
-                width: 60px;
-                min-width: 60px;
-                max-width: 60px;
-            }
-            
-            th:nth-child(3),
-            td:nth-child(3) {
-                width: 80px;
-                min-width: 80px;
-                max-width: 80px;
-            }
-            
-            th:nth-child(n+4),
-            td:nth-child(n+4) {
-                width: 60px;
-                min-width: 60px;
-                max-width: 60px;
-            }
-            
-            table {
-                min-width: 500px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .table-container {
-                padding: 10px;
-            }
-            
-            table {
-                min-width: 450px;
-            }
-            
-            th, td {
-                padding: 6px 4px;
-                font-size: 0.8rem;
             }
         }
     </style>
@@ -310,12 +219,8 @@
     <div class="container">
         <header>
             <div class="logo-container">
-                <!-- Solusi dengan fallback jika gambar tidak load -->
-                <img src="https://raw.githubusercontent.com/faisaljuniardi/wolesfc-point/main/logo.png" alt="Woles FC Logo" class="logo" 
-                     onerror="this.style.display='none'; document.getElementById('fallbackLogo').style.display='flex';">
-                <div id="fallbackLogo" class="fallback-logo" style="display: none;">
-                    WOLES FC
-                </div>
+                <!-- Ganti path dengan lokasi logo Anda -->
+                <img src="https://raw.githubusercontent.com/faisaljuniardi/wolesfc-point/main/logo.png" alt="Woles FC Logo" class="logo">
             </div>
             <div class="header-content">
                 <h1>Klasemen Woles Player Of The Month</h1>
@@ -479,7 +384,7 @@
             // Highlight peringkat 1, 2, 3
             if (index === 0) row.classList.add('rank-1');
             if (index === 1) row.classList.add('rank-2');
-            if (index === 2) row.classList.add('rank-3');
+            
             
             row.innerHTML = `
                 <td>${index + 1}</td>
@@ -504,6 +409,6 @@
     
     // Auto-refresh setiap 2 menit
     setInterval(loadData, 120000);
-    </script>
+</script>
 </body>
 </html>
