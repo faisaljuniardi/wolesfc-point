@@ -83,31 +83,43 @@
         }
         
         .table-container {
-            overflow-x: auto;
-            padding: 20px;
-        }
-        
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            min-width: 800px;
-        }
-        
-        th {
-            background: linear-gradient(to bottom, #4a6491, #2c3e50);
-            color: white;
-            padding: 15px 12px;
-            text-align: center;
-            font-weight: 600;
-            position: sticky;
-            top: 0;
-        }
-        
-        td {
-            padding: 12px;
-            text-align: center;
-            border-bottom: 1px solid #dee2e6;
-        }
+        overflow-x: auto;
+        padding: 20px;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    th, td {
+        padding: 12px 15px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+    }
+
+    th {
+        background-color: #f2f2f2;
+        font-weight: bold;
+    }
+
+    .loading {
+        text-align: center;
+        padding: 40px;
+        font-size: 1.2rem;
+        color: #6c757d;
+    }
+
+    .error {
+        text-align: center;
+        padding: 40px;
+        color: #e74c3c;
+        background-color: #fadbd8;
+        border-radius: 8px;
+        margin: 20px;
+    }
         
         tr:nth-child(even) {
             background-color: #f8f9fa;
@@ -236,63 +248,25 @@
         
     // Data dummy
     const dummyData = [
-        { name: "Faisal", totalPoints: 45, week1: 10, week2: 15, week3: 12, week4: 8 },
-        { name: "Faisal Lagi", totalPoints: 38, week1: 8, week2: 12, week3: 10, week4: 8 },
-        { name: "Bukan Faisal", totalPoints: 42, week1: 12, week2: 10, week3: 8, week4: 12 }
+        { name: "Aang", totalPoints: 45, week1: 10, week2: 15, week3: 12, week4: 8 },
+        { name: "Aceng", totalPoints: 38, week1: 8, week2: 12, week3: 10, week4: 8 },
+        { name: "Adam Pryzbek", totalPoints: 42, week1: 12, week2: 10, week3: 8, week4: 12 }
     ];
-    
-    // Elemen DOM - PASTIKAN ELEMEN INI ADA DI HTML
-    const tableBody = document.getElementById('tableBody');
-    const leaderboardTable = document.getElementById('leaderboardTable');
-    const loadingElement = document.getElementById('loading');
-    const errorElement = document.getElementById('error');
-    const refreshBtn = document.getElementById('refreshBtn');
-    const lastUpdatedElement = document.getElementById('lastUpdated');
-    const footerLastUpdatedElement = document.getElementById('footerLastUpdated');
-    
-    // Cek apakah elemen ada sebelum digunakan
-    function checkElements() {
-        const elements = {
-            tableBody: document.getElementById('tableBody'),
-            leaderboardTable: document.getElementById('leaderboardTable'),
-            loadingElement: document.getElementById('loading'),
-            errorElement: document.getElementById('error'),
-            lastUpdatedElement: document.getElementById('lastUpdated'),
-            footerLastUpdatedElement: document.getElementById('footerLastUpdated')
-        };
-        
-        for (const [name, element] of Object.entries(elements)) {
-            if (!element) {
-                console.error(`Element ${name} tidak ditemukan`);
-                return false;
-            }
-        }
-        return true;
-    }
-    
-    // Format tanggal
-    function formatDate(date) {
-        return new Date(date).toLocaleString('id-ID', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    }
     
     // Memuat data
     async function loadData() {
-        // Cek elemen dulu
-        if (!checkElements()) {
-            console.error('Beberapa elemen HTML tidak ditemukan');
-            return;
-        }
+        const loadingElement = document.getElementById('loading');
+        const errorElement = document.getElementById('error');
+        const leaderboardTable = document.getElementById('leaderboardTable');
+        const tableBody = document.getElementById('tableBody');
+        const lastUpdatedElement = document.getElementById('lastUpdated');
+        const footerLastUpdatedElement = document.getElementById('footerLastUpdated');
         
         try {
-            loadingElement.style.display = 'block';
-            leaderboardTable.style.display = 'none';
-            errorElement.style.display = 'none';
+            // Tampilkan loading, sembunyikan error
+            if (loadingElement) loadingElement.style.display = 'block';
+            if (errorElement) errorElement.style.display = 'none';
+            if (leaderboardTable) leaderboardTable.style.display = 'none';
             
             let playersData;
             
@@ -300,6 +274,7 @@
                 await new Promise(resolve => setTimeout(resolve, 1000));
                 playersData = dummyData;
             } else {
+                console.log('Mengambil data dari:', SCRIPT_URL);
                 const response = await fetch(SCRIPT_URL);
                 
                 if (!response.ok) {
@@ -307,34 +282,53 @@
                 }
                 
                 const result = await response.json();
+                console.log('Response dari server:', result);
                 
                 if (!result.success) {
                     throw new Error(`Server Error: ${result.error}`);
                 }
                 
                 playersData = result.data;
+            }
+            
+            // Render tabel
+            if (tableBody) {
+                tableBody.innerHTML = '';
                 
-                console.log('Data received:', playersData);
+                if (playersData && playersData.length > 0) {
+                    playersData.forEach((player, index) => {
+                        const row = document.createElement('tr');
+                        
+                        if (index === 0) row.classList.add('rank-1');
+                        if (index === 1) row.classList.add('rank-2');
+                        if (index === 2) row.classList.add('rank-3');
+                        
+                        row.innerHTML = `
+                            <td>${index + 1}</td>
+                            <td class="player-name">${player.name}</td>
+                            <td class="total-points">${player.totalPoints}</td>
+                            <td>${player.week1 || 0}</td>
+                            <td>${player.week2 || 0}</td>
+                            <td>${player.week3 || 0}</td>
+                            <td>${player.week4 || 0}</td>
+                        `;
+                        
+                        tableBody.appendChild(row);
+                    });
+                } else {
+                    tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Tidak ada data</td></tr>';
+                }
             }
             
-            // Pastikan playersData adalah array
-            if (!Array.isArray(playersData)) {
-                throw new Error('Data yang diterima bukan array');
-            }
+            // Update timestamp
+            const now = new Date();
+            const formattedDate = formatDate(now);
+            if (lastUpdatedElement) lastUpdatedElement.textContent = formattedDate;
+            if (footerLastUpdatedElement) footerLastUpdatedElement.textContent = formattedDate;
             
-            // Render data ke tabel
-            renderTable(playersData);
-            
-            // Update timestamp - PASTIKAN ELEMEN ADA
-            if (lastUpdatedElement && footerLastUpdatedElement) {
-                const now = new Date();
-                const formattedDate = formatDate(now);
-                lastUpdatedElement.textContent = formattedDate;
-                footerLastUpdatedElement.textContent = formattedDate;
-            }
-            
-            loadingElement.style.display = 'none';
-            leaderboardTable.style.display = 'table';
+            // Sembunyikan loading, tampilkan tabel
+            if (loadingElement) loadingElement.style.display = 'none';
+            if (leaderboardTable) leaderboardTable.style.display = 'table';
             
         } catch (error) {
             console.error('Error:', error);
@@ -349,58 +343,50 @@
             }
             
             // Fallback ke dummy data
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            renderTable(dummyData);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            if (tableBody) {
+                tableBody.innerHTML = '';
+                dummyData.forEach((player, index) => {
+                    const row = document.createElement('tr');
+                    if (index === 0) row.classList.add('rank-1');
+                    if (index === 1) row.classList.add('rank-2');
+                    if (index === 2) row.classList.add('rank-3');
+                    
+                    row.innerHTML = `
+                        <td>${index + 1}</td>
+                        <td class="player-name">${player.name}</td>
+                        <td class="total-points">${player.totalPoints}</td>
+                        <td>${player.week1}</td>
+                        <td>${player.week2}</td>
+                        <td>${player.week3}</td>
+                        <td>${player.week4}</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            }
+            if (leaderboardTable) leaderboardTable.style.display = 'table';
+            if (errorElement) errorElement.style.display = 'none';
         }
     }
     
-    // Function untuk render tabel
-    function renderTable(playersData) {
-        if (!tableBody) {
-            console.error('tableBody tidak ditemukan');
-            return;
-        }
-        
-        tableBody.innerHTML = '';
-        
-        // Urutkan berdasarkan total poin (descending)
-        playersData.sort((a, b) => b.totalPoints - a.totalPoints);
-        
-        playersData.forEach((player, index) => {
-            const row = document.createElement('tr');
-            
-            // Highlight peringkat 1, 2, 3
-            if (index === 0) row.classList.add('rank-1');
-            if (index === 1) row.classList.add('rank-2');
-            if (index === 2) row.classList.add('rank-3');
-            
-            row.innerHTML = `
-                <td>${index + 1}</td>
-                <td class="player-name">${player.name}</td>
-                <td class="total-points">${player.totalPoints}</td>
-                <td>${player.week1}</td>
-                <td>${player.week2}</td>
-                <td>${player.week3}</td>
-                <td>${player.week4}</td>
-            `;
-            
-            tableBody.appendChild(row);
+    function formatDate(date) {
+        return new Date(date).toLocaleString('id-ID', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
         });
-        
-        if (leaderboardTable) {
-            leaderboardTable.style.display = 'table';
-        }
-        if (errorElement) {
-            errorElement.style.display = 'none';
-        }
     }
     
     // Event listeners
-    if (refreshBtn) {
-        refreshBtn.addEventListener('click', loadData);
-    }
-    
-    document.addEventListener('DOMContentLoaded', loadData);
+    document.addEventListener('DOMContentLoaded', function() {
+        const refreshBtn = document.getElementById('refreshBtn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', loadData);
+        }
+        loadData();
+    });
     
     // Auto-refresh setiap 2 menit
     setInterval(loadData, 120000);
