@@ -221,6 +221,11 @@
             </table>
         </div>
         
+        <div class="controls">
+            <button class="refresh-btn" id="refreshBtn">Refresh Data</button>
+            <div class="status">Terakhir diperbarui: <span id="lastUpdated">-</span></div>
+        </div>
+        
         <footer class="site-footer">
             <div class="footer-content">
                 <p>&copy; 2025 Fjun21 </p>
@@ -233,20 +238,15 @@
     // Konfigurasi
     const USE_DUMMY_DATA = false;
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwZPWVmC6RNLmnZHtHCjptpaylAnae6u11yR8EqxoH6khGHzTcBIOMGPj4mdRCDVvAR1A/exec'; // Ganti dengan URL Anda
-    
+        
     // Data dummy
     const dummyData = [
-        { name: "Aang", totalPoints: 45, week1: 10, week2: 15, week3: 12, week4: 8 },
-        { name: "Aceng", totalPoints: 38, week1: 8, week2: 12, week3: 10, week4: 8 },
-        { name: "Adam Pryzbek", totalPoints: 42, week1: 12, week2: 10, week3: 8, week4: 12 },
-        { name: "Adik", totalPoints: 35, week1: 7, week2: 9, week3: 10, week4: 9 },
-        { name: "Adit", totalPoints: 40, week1: 9, week2: 11, week3: 8, week4: 12 },
-        { name: "Aep", totalPoints: 32, week1: 6, week2: 8, week3: 9, week4: 9 },
-        { name: "Agus", totalPoints: 37, week1: 8, week2: 10, week3: 9, week4: 10 },
-        { name: "Ahmad", totalPoints: 28, week1: 5, week2: 7, week3: 8, week4: 8 }
+        { name: "Faisal", totalPoints: 45, week1: 10, week2: 15, week3: 12, week4: 8 },
+        { name: "Faisal Lagi", totalPoints: 38, week1: 8, week2: 12, week3: 10, week4: 8 },
+        { name: "Bukan Faisal", totalPoints: 42, week1: 12, week2: 10, week3: 8, week4: 12 }
     ];
     
-    // Elemen DOM
+    // Elemen DOM - PASTIKAN ELEMEN INI ADA DI HTML
     const tableBody = document.getElementById('tableBody');
     const leaderboardTable = document.getElementById('leaderboardTable');
     const loadingElement = document.getElementById('loading');
@@ -254,6 +254,26 @@
     const refreshBtn = document.getElementById('refreshBtn');
     const lastUpdatedElement = document.getElementById('lastUpdated');
     const footerLastUpdatedElement = document.getElementById('footerLastUpdated');
+    
+    // Cek apakah elemen ada sebelum digunakan
+    function checkElements() {
+        const elements = {
+            tableBody: document.getElementById('tableBody'),
+            leaderboardTable: document.getElementById('leaderboardTable'),
+            loadingElement: document.getElementById('loading'),
+            errorElement: document.getElementById('error'),
+            lastUpdatedElement: document.getElementById('lastUpdated'),
+            footerLastUpdatedElement: document.getElementById('footerLastUpdated')
+        };
+        
+        for (const [name, element] of Object.entries(elements)) {
+            if (!element) {
+                console.error(`Element ${name} tidak ditemukan`);
+                return false;
+            }
+        }
+        return true;
+    }
     
     // Format tanggal
     function formatDate(date) {
@@ -268,6 +288,12 @@
     
     // Memuat data
     async function loadData() {
+        // Cek elemen dulu
+        if (!checkElements()) {
+            console.error('Beberapa elemen HTML tidak ditemukan');
+            return;
+        }
+        
         try {
             loadingElement.style.display = 'block';
             leaderboardTable.style.display = 'none';
@@ -276,11 +302,9 @@
             let playersData;
             
             if (USE_DUMMY_DATA) {
-                // Gunakan data dummy
                 await new Promise(resolve => setTimeout(resolve, 1000));
                 playersData = dummyData;
             } else {
-                // Fetch dari Google Apps Script
                 const response = await fetch(SCRIPT_URL);
                 
                 if (!response.ok) {
@@ -293,7 +317,6 @@
                     throw new Error(`Server Error: ${result.error}`);
                 }
                 
-                // PERBAIKAN: Ambil data dari property 'data'
                 playersData = result.data;
                 
                 console.log('Data received:', playersData);
@@ -307,24 +330,28 @@
             // Render data ke tabel
             renderTable(playersData);
             
-            // Update timestamp
-            const now = new Date();
-            const formattedDate = formatDate(now);
-            lastUpdatedElement.textContent = formattedDate;
-            footerLastUpdatedElement.textContent = formattedDate;
+            // Update timestamp - PASTIKAN ELEMEN ADA
+            if (lastUpdatedElement && footerLastUpdatedElement) {
+                const now = new Date();
+                const formattedDate = formatDate(now);
+                lastUpdatedElement.textContent = formattedDate;
+                footerLastUpdatedElement.textContent = formattedDate;
+            }
             
             loadingElement.style.display = 'none';
             leaderboardTable.style.display = 'table';
             
         } catch (error) {
             console.error('Error:', error);
-            loadingElement.style.display = 'none';
-            errorElement.style.display = 'block';
-            errorElement.innerHTML = `
-                <h3>Gagal Memuat Data</h3>
-                <p><strong>Error:</strong> ${error.message}</p>
-                <p>Menggunakan data dummy untuk sementara...</p>
-            `;
+            if (loadingElement) loadingElement.style.display = 'none';
+            if (errorElement) {
+                errorElement.style.display = 'block';
+                errorElement.innerHTML = `
+                    <h3>Gagal Memuat Data</h3>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                    <p>Menggunakan data dummy untuk sementara...</p>
+                `;
+            }
             
             // Fallback ke dummy data
             await new Promise(resolve => setTimeout(resolve, 2000));
@@ -334,6 +361,11 @@
     
     // Function untuk render tabel
     function renderTable(playersData) {
+        if (!tableBody) {
+            console.error('tableBody tidak ditemukan');
+            return;
+        }
+        
         tableBody.innerHTML = '';
         
         // Urutkan berdasarkan total poin (descending)
@@ -360,12 +392,19 @@
             tableBody.appendChild(row);
         });
         
-        leaderboardTable.style.display = 'table';
-        errorElement.style.display = 'none';
+        if (leaderboardTable) {
+            leaderboardTable.style.display = 'table';
+        }
+        if (errorElement) {
+            errorElement.style.display = 'none';
+        }
     }
     
     // Event listeners
-    refreshBtn.addEventListener('click', loadData);
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', loadData);
+    }
+    
     document.addEventListener('DOMContentLoaded', loadData);
     
     // Auto-refresh setiap 2 menit
