@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Klasemen Player Of The Month</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(to right, #2c3e50, #4a6491);
+            color: white;
+            padding: 25px 30px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        .period {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .controls {
+            padding: 20px;
+            background-color: #f8f9fa;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .refresh-btn {
+            background: linear-gradient(to right, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .status {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            padding: 20px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 800px;
+        }
+        
+        th {
+            background: linear-gradient(to bottom, #4a6491, #2c3e50);
+            color: white;
+            padding: 15px 12px;
+            text-align: center;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+        
+        td {
+            padding: 12px;
+            text-align: center;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        tr:hover {
+            background-color: #e9ecef;
+            transition: background-color 0.2s;
+        }
+        
+        .rank-1 {
+            background-color: rgba(255, 215, 0, 0.2) !important;
+            font-weight: bold;
+        }
+        
+        .rank-2 {
+            background-color: rgba(192, 192, 192, 0.2) !important;
+        }
+        
+        .rank-3 {
+            background-color: rgba(205, 127, 50, 0.2) !important;
+        }
+        
+        .player-name {
+            text-align: left;
+            font-weight: 500;
+        }
+        
+        .total-points {
+            font-weight: 700;
+            color: #2c3e50;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.2rem;
+            color: #6c757d;
+        }
+        
+        .error {
+            text-align: center;
+            padding: 40px;
+            color: #e74c3c;
+            background-color: #fadbd8;
+            border-radius: 8px;
+            margin: 20px;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+            font-size: 0.9rem;
+            border-top: 1px solid #dee2e6;
+        }
+        
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            th, td {
+                padding: 10px 8px;
+                font-size: 0.9rem;
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Klasemen Player Of The Month</h1>
+            <div class="period" id="period">Oktober</div>
+        </header>
+        
+        <div class="controls">
+            <button class="refresh-btn" id="refreshBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                    <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+                </svg>
+                Refresh Data
+            </button>
+            <div class="status" id="status">Terakhir diperbarui: <span id="lastUpdated">-</span></div>
+        </div>
+        
+        <div class="table-container">
+            <div id="loading" class="loading">Memuat data...</div>
+            <div id="error" class="error" style="display: none;"></div>
+            <table id="leaderboardTable" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Peringkat</th>
+                        <th>Pemain</th>
+                        <th>Total Poin</th>
+                        <th>Minggu 1</th>
+                        <th>Minggu 2</th>
+                        <th>Minggu 3</th>
+                        <th>Minggu 4</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- Data akan diisi oleh JavaScript -->
+                </tbody>
+            </table>
+        </div>
+        
+        <footer>
+            <p>Data diambil dari Google Sheets • Terakhir diperbarui: <span id="footerLastUpdated">-</span></p>
+        </footer>
+    </div>
+
+    <script>
+        // URL Google Apps Script Web App (akan diisi setelah membuat script)
+        // Ganti dengan URL Web App Anda setelah deploy
+        const SCRIPT_URL = 'https://script.google.com/macros/s/1wqzM7hP_wsn7eug1EBCu_KPSCSrTNcWFVzAgbik8DDA/exec';
+        
+        // Elemen DOM
+        const tableBody = document.getElementById('tableBody');
+        const leaderboardTable = document.getElementById('leaderboardTable');
+        const loadingElement = document.getElementById('loading');
+        const errorElement = document.getElementById('error');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const lastUpdatedElement = document.getElementById('lastUpdated');
+        const footerLastUpdatedElement = document.getElementById('footerLastUpdated');
+        
+        // Format tanggal
+        function formatDate(date) {
+            return new Date(date).toLocaleString('id-ID', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+        
+        // Memuat data dari Google Sheets
+        async function loadData() {
+            try {
+                // Tampilkan loading, sembunyikan tabel dan error
+                loadingElement.style.display = 'block';
+                leaderboardTable.style.display = 'none';
+                errorElement.style.display = 'none';
+                
+                // Fetch data dari Google Apps Script
+                const response = await fetch(SCRIPT_URL);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // Kosongkan tabel
+                tableBody.innerHTML = '';
+                
+                // Isi tabel dengan data
+                data.forEach((player, index) => {
+                    const row = document.createElement('tr');
+                    
+                    // Tambahkan kelas untuk peringkat 1, 2, 3
+                    if (index === 0) row.classList.add('rank-1');
+                    if (index === 1) row.classList.add('rank-2');
+                    if (index === 2) row.classList.add('rank-3');
+                    
+                    row.innerHTML = `
+                        <td>${index + 1}</td>
+                        <td class="player-name">${player.name}</td>
+                        <td class="total-points">${player.totalPoints}</td>
+                        <td>${player.week1}</td>
+                        <td>${player.week2}</td>
+                        <td>${player.week3}</td>
+                        <td>${player.week4}</td>
+                    `;
+                    
+                    tableBody.appendChild(row);
+                });
+                
+                // Update timestamp
+                const now = new Date();
+                const formattedDate = formatDate(now);
+                lastUpdatedElement.textContent = formattedDate;
+                footerLastUpdatedElement.textContent = formattedDate;
+                
+                // Sembunyikan loading, tampilkan tabel
+                loadingElement.style.display = 'none';
+                leaderboardTable.style.display = 'table';
+                
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                loadingElement.style.display = 'none';
+                errorElement.style.display = 'block';
+                errorElement.textContent = `Gagal memuat data: ${error.message}. Pastikan URL script sudah benar dan Google Sheets dapat diakses.`;
+            }
+        }
+        
+        // Event listener untuk tombol refresh
+        refreshBtn.addEventListener('click', loadData);
+        
+        // Muat data saat halaman pertama kali dibuka
+        document.addEventListener('DOMContentLoaded', loadData);
+        
+        // Auto-refresh setiap 2 menit (opsional)
+        setInterval(loadData, 120000);
+    </script>
+</body>
+</html>
