@@ -226,98 +226,146 @@
     </div>
 
     <script>
-        // URL Google Apps Script Web App (akan diisi setelah membuat script)
-        // Ganti dengan URL Web App Anda setelah deploy
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbywI0it71T6wQ_Mg45HDfOIQtSSG3rt2DMMVAuX3Mf3KIzyGMMej-C-bvDCRIsi5ULS5A/exec';
-        
-        // Elemen DOM
-        const tableBody = document.getElementById('tableBody');
-        const leaderboardTable = document.getElementById('leaderboardTable');
-        const loadingElement = document.getElementById('loading');
-        const errorElement = document.getElementById('error');
-        const refreshBtn = document.getElementById('refreshBtn');
-        const lastUpdatedElement = document.getElementById('lastUpdated');
-        const footerLastUpdatedElement = document.getElementById('footerLastUpdated');
-        
-        // Format tanggal
-        function formatDate(date) {
-            return new Date(date).toLocaleString('id-ID', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        }
-        
-        // Memuat data dari Google Sheets
-        async function loadData() {
-            try {
-                // Tampilkan loading, sembunyikan tabel dan error
-                loadingElement.style.display = 'block';
-                leaderboardTable.style.display = 'none';
-                errorElement.style.display = 'none';
-                
-                // Fetch data dari Google Apps Script
+    // Konfigurasi
+    const USE_DUMMY_DATA = false;
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbywI0it71T6wQ_Mg45HDfOIQtSSG3rt2DMMVAuX3Mf3KIzyGMMej-C-bvDCRIsi5ULS5A/exec'; // Ganti dengan URL Anda
+    
+    // Data dummy
+    const dummyData = [
+        { name: "Aang", totalPoints: 45, week1: 10, week2: 15, week3: 12, week4: 8 },
+        { name: "Aceng", totalPoints: 38, week1: 8, week2: 12, week3: 10, week4: 8 },
+        { name: "Adam Pryzbek", totalPoints: 42, week1: 12, week2: 10, week3: 8, week4: 12 },
+        { name: "Adik", totalPoints: 35, week1: 7, week2: 9, week3: 10, week4: 9 },
+        { name: "Adit", totalPoints: 40, week1: 9, week2: 11, week3: 8, week4: 12 },
+        { name: "Aep", totalPoints: 32, week1: 6, week2: 8, week3: 9, week4: 9 },
+        { name: "Agus", totalPoints: 37, week1: 8, week2: 10, week3: 9, week4: 10 },
+        { name: "Ahmad", totalPoints: 28, week1: 5, week2: 7, week3: 8, week4: 8 }
+    ];
+    
+    // Elemen DOM
+    const tableBody = document.getElementById('tableBody');
+    const leaderboardTable = document.getElementById('leaderboardTable');
+    const loadingElement = document.getElementById('loading');
+    const errorElement = document.getElementById('error');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const lastUpdatedElement = document.getElementById('lastUpdated');
+    const footerLastUpdatedElement = document.getElementById('footerLastUpdated');
+    
+    // Format tanggal
+    function formatDate(date) {
+        return new Date(date).toLocaleString('id-ID', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+    
+    // Memuat data
+    async function loadData() {
+        try {
+            loadingElement.style.display = 'block';
+            leaderboardTable.style.display = 'none';
+            errorElement.style.display = 'none';
+            
+            let playersData;
+            
+            if (USE_DUMMY_DATA) {
+                // Gunakan data dummy
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                playersData = dummyData;
+            } else {
+                // Fetch dari Google Apps Script
                 const response = await fetch(SCRIPT_URL);
                 
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    throw new Error(`HTTP Error: ${response.status}`);
                 }
                 
-                const data = await response.json();
+                const result = await response.json();
                 
-                // Kosongkan tabel
-                tableBody.innerHTML = '';
+                if (!result.success) {
+                    throw new Error(`Server Error: ${result.error}`);
+                }
                 
-                // Isi tabel dengan data
-                data.forEach((player, index) => {
-                    const row = document.createElement('tr');
-                    
-                    // Tambahkan kelas untuk peringkat 1, 2, 3
-                    if (index === 0) row.classList.add('rank-1');
-                    if (index === 1) row.classList.add('rank-2');
-                    if (index === 2) row.classList.add('rank-3');
-                    
-                    row.innerHTML = `
-                        <td>${index + 1}</td>
-                        <td class="player-name">${player.name}</td>
-                        <td class="total-points">${player.totalPoints}</td>
-                        <td>${player.week1}</td>
-                        <td>${player.week2}</td>
-                        <td>${player.week3}</td>
-                        <td>${player.week4}</td>
-                    `;
-                    
-                    tableBody.appendChild(row);
-                });
+                // PERBAIKAN: Ambil data dari property 'data'
+                playersData = result.data;
                 
-                // Update timestamp
-                const now = new Date();
-                const formattedDate = formatDate(now);
-                lastUpdatedElement.textContent = formattedDate;
-                footerLastUpdatedElement.textContent = formattedDate;
-                
-                // Sembunyikan loading, tampilkan tabel
-                loadingElement.style.display = 'none';
-                leaderboardTable.style.display = 'table';
-                
-            } catch (error) {
-                console.error('Error fetching data:', error);
-                loadingElement.style.display = 'none';
-                errorElement.style.display = 'block';
-                errorElement.textContent = `Gagal memuat data: ${error.message}. Pastikan URL script sudah benar dan Google Sheets dapat diakses.`;
+                console.log('Data received:', playersData);
             }
+            
+            // Pastikan playersData adalah array
+            if (!Array.isArray(playersData)) {
+                throw new Error('Data yang diterima bukan array');
+            }
+            
+            // Render data ke tabel
+            renderTable(playersData);
+            
+            // Update timestamp
+            const now = new Date();
+            const formattedDate = formatDate(now);
+            lastUpdatedElement.textContent = formattedDate;
+            footerLastUpdatedElement.textContent = formattedDate;
+            
+            loadingElement.style.display = 'none';
+            leaderboardTable.style.display = 'table';
+            
+        } catch (error) {
+            console.error('Error:', error);
+            loadingElement.style.display = 'none';
+            errorElement.style.display = 'block';
+            errorElement.innerHTML = `
+                <h3>Gagal Memuat Data</h3>
+                <p><strong>Error:</strong> ${error.message}</p>
+                <p>Menggunakan data dummy untuk sementara...</p>
+            `;
+            
+            // Fallback ke dummy data
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            renderTable(dummyData);
         }
+    }
+    
+    // Function untuk render tabel
+    function renderTable(playersData) {
+        tableBody.innerHTML = '';
         
-        // Event listener untuk tombol refresh
-        refreshBtn.addEventListener('click', loadData);
+        // Urutkan berdasarkan total poin (descending)
+        playersData.sort((a, b) => b.totalPoints - a.totalPoints);
         
-        // Muat data saat halaman pertama kali dibuka
-        document.addEventListener('DOMContentLoaded', loadData);
+        playersData.forEach((player, index) => {
+            const row = document.createElement('tr');
+            
+            // Highlight peringkat 1, 2, 3
+            if (index === 0) row.classList.add('rank-1');
+            if (index === 1) row.classList.add('rank-2');
+            if (index === 2) row.classList.add('rank-3');
+            
+            row.innerHTML = `
+                <td>${index + 1}</td>
+                <td class="player-name">${player.name}</td>
+                <td class="total-points">${player.totalPoints}</td>
+                <td>${player.week1}</td>
+                <td>${player.week2}</td>
+                <td>${player.week3}</td>
+                <td>${player.week4}</td>
+            `;
+            
+            tableBody.appendChild(row);
+        });
         
-        // Auto-refresh setiap 2 menit (opsional)
-        setInterval(loadData, 120000);
-    </script>
+        leaderboardTable.style.display = 'table';
+        errorElement.style.display = 'none';
+    }
+    
+    // Event listeners
+    refreshBtn.addEventListener('click', loadData);
+    document.addEventListener('DOMContentLoaded', loadData);
+    
+    // Auto-refresh setiap 2 menit
+    setInterval(loadData, 120000);
+</script>
 </body>
 </html>
