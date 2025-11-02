@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="shortcut icon" type="image/x-icon" href="https://raw.githubusercontent.com/faisaljuniardi/wolesfc-point/main/favicon.ico">
     <title>Woles FC</title>
+    <!-- Tambahkan library html2canvas untuk konversi HTML ke gambar -->
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -80,8 +82,13 @@
             border-bottom: 1px solid #dee2e6;
         }
         
-        .refresh-btn {
-            background: linear-gradient(to right, #3498db, #2980b9);
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .refresh-btn, .download-btn {
             color: white;
             border: none;
             padding: 10px 20px;
@@ -94,7 +101,15 @@
             gap: 8px;
         }
         
-        .refresh-btn:hover {
+        .refresh-btn {
+            background: linear-gradient(to right, #3498db, #2980b9);
+        }
+        
+        .download-btn {
+            background: linear-gradient(to right, #27ae60, #219653);
+        }
+        
+        .refresh-btn:hover, .download-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
@@ -212,6 +227,11 @@
                 align-items: stretch;
             }
             
+            .button-group {
+                justify-content: center;
+                width: 100%;
+            }
+            
             th, td {
                 padding: 10px 8px;
                 font-size: 0.9rem;
@@ -239,13 +259,22 @@
         </header>
         
         <div class="controls">
-            <button class="refresh-btn" id="refreshBtn">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
-                    <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
-                </svg>
-                Refresh Data
-            </button>
+            <div class="button-group">
+                <button class="refresh-btn" id="refreshBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                        <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+                    </svg>
+                    Refresh Data
+                </button>
+                <button class="download-btn" id="downloadBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                        <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                    </svg>
+                    Download Klasemen
+                </button>
+            </div>
             <div class="status" id="status">Terakhir diperbarui: <span id="lastUpdated">-</span></div>
         </div>
         
@@ -301,6 +330,7 @@
     const loadingElement = document.getElementById('loading');
     const errorElement = document.getElementById('error');
     const refreshBtn = document.getElementById('refreshBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
     const lastUpdatedElement = document.getElementById('lastUpdated');
     const footerLastUpdatedElement = document.getElementById('footerLastUpdated');
     
@@ -414,8 +444,54 @@
         errorElement.style.display = 'none';
     }
     
+    // Fungsi untuk download klasemen sebagai gambar
+    function downloadLeaderboard() {
+        // Tampilkan loading state pada tombol
+        const originalText = downloadBtn.innerHTML;
+        downloadBtn.innerHTML = '<span>Mengunduh...</span>';
+        downloadBtn.disabled = true;
+        
+        // Ambil elemen container yang akan di-capture
+        const element = document.querySelector('.container');
+        
+        // Opsi untuk html2canvas
+        const options = {
+            scale: 2, // Meningkatkan kualitas gambar
+            useCORS: true, // Mengizinkan gambar cross-origin
+            backgroundColor: '#ffffff' // Background putih untuk hasil yang lebih bersih
+        };
+        
+        // Konversi HTML ke canvas
+        html2canvas(element, options).then(canvas => {
+            // Konversi canvas ke gambar JPG
+            const image = canvas.toDataURL('image/jpeg', 0.9);
+            
+            // Buat link untuk download
+            const link = document.createElement('a');
+            link.href = image;
+            link.download = `Klasemen_WolesFC_${new Date().toISOString().slice(0, 10)}.jpg`;
+            
+            // Trigger download
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // Kembalikan tombol ke keadaan semula
+            downloadBtn.innerHTML = originalText;
+            downloadBtn.disabled = false;
+        }).catch(error => {
+            console.error('Error generating image:', error);
+            alert('Terjadi kesalahan saat mengunduh klasemen. Silakan coba lagi.');
+            
+            // Kembalikan tombol ke keadaan semula
+            downloadBtn.innerHTML = originalText;
+            downloadBtn.disabled = false;
+        });
+    }
+    
     // Event listeners
     refreshBtn.addEventListener('click', loadData);
+    downloadBtn.addEventListener('click', downloadLeaderboard);
     document.addEventListener('DOMContentLoaded', loadData);
     
     // Auto-refresh setiap 5 menit
