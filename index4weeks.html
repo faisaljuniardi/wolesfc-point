@@ -412,6 +412,77 @@
         errorElement.style.display = 'none';
     }
     
+    // Fungsi untuk mendownload leaderboard sebagai gambar
+function downloadLeaderboard() {
+    // Tampilkan loading state pada tombol
+    const originalText = downloadBtn.innerHTML;
+    downloadBtn.innerHTML = '<span>Mengunduh...</span>';
+    downloadBtn.disabled = true;
+    
+    // Ambil elemen container asli dan clone agar UI asli tidak terganggu
+    const originalContainer = document.querySelector('.container');
+    const clone = originalContainer.cloneNode(true);
+    
+    // Hapus bagian controls (tombol refresh/download + status) dari clone
+    const controls = clone.querySelector('.controls');
+    if (controls) controls.remove();
+    
+    // Pastikan loading / error tidak tampil di clone, dan tabel tampil
+    const loadingClone = clone.querySelector('#loading');
+    if (loadingClone) loadingClone.style.display = 'none';
+    const errorClone = clone.querySelector('#error');
+    if (errorClone) errorClone.style.display = 'none';
+    const tableClone = clone.querySelector('#leaderboardTable');
+    if (tableClone) tableClone.style.display = 'table';
+    
+    // Tempel clone ke DOM secara off-screen supaya dapat di-capture oleh html2canvas
+    const wrapper = document.createElement('div');
+    wrapper.style.position = 'absolute';
+    wrapper.style.left = '-9999px';
+    wrapper.style.top = '0';
+    wrapper.appendChild(clone);
+    document.body.appendChild(wrapper);
+    
+    // Opsi untuk html2canvas
+    const options = {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff'
+    };
+    
+    // Konversi HTML ke canvas (menggunakan clone)
+    html2canvas(clone, options).then(canvas => {
+        const image = canvas.toDataURL('image/jpeg', 0.9);
+        
+        // Buat link untuk download
+        const link = document.createElement('a');
+        link.href = image;
+        link.download = `Klasemen_WolesFC_${new Date().toISOString().slice(0, 10)}.jpg`;
+        
+        // Trigger download
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Hapus wrapper clone dari DOM
+        document.body.removeChild(wrapper);
+        
+        // Kembalikan tombol ke keadaan semula
+        downloadBtn.innerHTML = originalText;
+        downloadBtn.disabled = false;
+    }).catch(error => {
+        console.error('Error generating image:', error);
+        alert('Terjadi kesalahan saat mengunduh klasemen. Silakan coba lagi.');
+        
+        // Hapus wrapper clone bila ada
+        if (document.body.contains(wrapper)) document.body.removeChild(wrapper);
+        
+        // Kembalikan tombol ke keadaan semula
+        downloadBtn.innerHTML = originalText;
+        downloadBtn.disabled = false;
+    });
+}
+
     // Event listeners
     refreshBtn.addEventListener('click', loadData);
     document.addEventListener('DOMContentLoaded', loadData);
