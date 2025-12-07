@@ -291,7 +291,6 @@
                         <th>Minggu 2</th>
                         <th>Minggu 3</th>
                         <th>Minggu 4</th>
-                        <th>Minggu 5</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
@@ -312,16 +311,16 @@
     const USE_DUMMY_DATA = false;
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyGabKYtoVjb6lWjix-HR0IiSN8D9nxKA3TnVcFtgzFkFbTX3A4OwO8xyUpw4sAi-nkFw/exec'; // Ganti dengan URL Anda
     
-    // Data dummy yang diperbarui dengan minggu 5
+    // Data dummy yang diperbarui untuk 4 minggu
     const dummyData = [
-        { name: "Aang", totalPoints: 55, week1: 10, week2: 15, week3: 12, week4: 8, week5: 10 },
-        { name: "Aceng", totalPoints: 48, week1: 8, week2: 12, week3: 10, week4: 8, week5: 10 },
-        { name: "Adam Pryzbek", totalPoints: 52, week1: 12, week2: 10, week3: 8, week4: 12, week5: 10 },
-        { name: "Adik", totalPoints: 45, week1: 7, week2: 9, week3: 10, week4: 9, week5: 10 },
-        { name: "Adit", totalPoints: 50, week1: 9, week2: 11, week3: 8, week4: 12, week5: 10 },
-        { name: "Aep", totalPoints: 42, week1: 6, week2: 8, week3: 9, week4: 9, week5: 10 },
-        { name: "Agus", totalPoints: 47, week1: 8, week2: 10, week3: 9, week4: 10, week5: 10 },
-        { name: "Ahmad", totalPoints: 38, week1: 5, week2: 7, week3: 8, week4: 8, week5: 10 }
+        { name: "Aang", totalPoints: 55, week1: 10, week2: 15, week3: 12, week4: 18 },
+        { name: "Aceng", totalPoints: 48, week1: 8, week2: 12, week3: 10, week4: 18 },
+        { name: "Adam Pryzbek", totalPoints: 52, week1: 12, week2: 10, week3: 8, week4: 22 },
+        { name: "Adik", totalPoints: 45, week1: 7, week2: 9, week3: 10, week4: 19 },
+        { name: "Adit", totalPoints: 50, week1: 9, week2: 11, week3: 8, week4: 22 },
+        { name: "Aep", totalPoints: 42, week1: 6, week2: 8, week3: 9, week4: 19 },
+        { name: "Agus", totalPoints: 47, week1: 8, week2: 10, week3: 9, week4: 20 },
+        { name: "Ahmad", totalPoints: 38, week1: 5, week2: 7, week3: 8, week4: 18 }
     ];
     
     // Elemen DOM
@@ -372,8 +371,17 @@
                     throw new Error(`Server Error: ${result.error}`);
                 }
                 
-                // PERBAIKAN: Ambil data dari property 'data'
-                playersData = result.data;
+                // PERBAIKAN: Ambil data dari property 'data' atau langsung dari result
+                // Sesuaikan dengan struktur data yang dikirim oleh Google Apps Script
+                if (result.data && Array.isArray(result.data)) {
+                    playersData = result.data;
+                } else if (Array.isArray(result)) {
+                    playersData = result;
+                } else if (result.leaderboard && Array.isArray(result.leaderboard)) {
+                    playersData = result.leaderboard;
+                } else {
+                    throw new Error('Format data tidak dikenali');
+                }
                 
                 console.log('Data received:', playersData);
             }
@@ -383,8 +391,22 @@
                 throw new Error('Data yang diterima bukan array');
             }
             
+            // Transformasi data jika diperlukan (menghapus week5 jika ada)
+            const transformedData = playersData.map(player => {
+                // Buat objek baru tanpa week5
+                return {
+                    name: player.playerName || player.name,
+                    totalPoints: player.totalPoints || player.total,
+                    week1: player.week1 || 0,
+                    week2: player.week2 || 0,
+                    week3: player.week3 || 0,
+                    week4: player.week4 || 0
+                    // week5 sengaja dihilangkan
+                };
+            });
+            
             // Render data ke tabel
-            renderTable(playersData);
+            renderTable(transformedData);
             
             // Update timestamp
             const now = new Date();
@@ -434,7 +456,6 @@
                 <td>${player.week2}</td>
                 <td>${player.week3}</td>
                 <td>${player.week4}</td>
-                <td>${player.week5}</td>
             `;
             
             tableBody.appendChild(row);

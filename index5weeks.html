@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="shortcut icon" type="image/x-icon" href="https://raw.githubusercontent.com/faisaljuniardi/wolesfc-point/main/favicon.ico">
     <title>Woles FC</title>
+    <!-- Tambahkan library html2canvas untuk konversi HTML ke gambar -->
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -80,8 +82,13 @@
             border-bottom: 1px solid #dee2e6;
         }
         
-        .refresh-btn {
-            background: linear-gradient(to right, #3498db, #2980b9);
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .refresh-btn, .download-btn {
             color: white;
             border: none;
             padding: 10px 20px;
@@ -94,7 +101,15 @@
             gap: 8px;
         }
         
-        .refresh-btn:hover {
+        .refresh-btn {
+            background: linear-gradient(to right, #3498db, #2980b9);
+        }
+        
+        .download-btn {
+            background: linear-gradient(to right, #27ae60, #219653);
+        }
+        
+        .refresh-btn:hover, .download-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
@@ -212,6 +227,11 @@
                 align-items: stretch;
             }
             
+            .button-group {
+                justify-content: center;
+                width: 100%;
+            }
+            
             th, td {
                 padding: 10px 8px;
                 font-size: 0.9rem;
@@ -232,20 +252,29 @@
             </div>
             <div class="header-content">
                 <h1>Klasemen Woles Player Of The Month</h1>
-                <div class="period" id="period">Oktober</div>
+                <div class="period" id="period">Nopember</div>
             </div>
             <!-- Elemen kosong untuk menjaga keseimbangan layout -->
             <div class="logo-container" style="visibility: hidden;"></div>
         </header>
         
         <div class="controls">
-            <button class="refresh-btn" id="refreshBtn">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
-                    <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
-                </svg>
-                Refresh Data
-            </button>
+            <div class="button-group">
+                <button class="refresh-btn" id="refreshBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                        <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+                    </svg>
+                    Refresh Data
+                </button>
+                <button class="download-btn" id="downloadBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                        <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                    </svg>
+                    Download Klasemen
+                </button>
+            </div>
             <div class="status" id="status">Terakhir diperbarui: <span id="lastUpdated">-</span></div>
         </div>
         
@@ -262,6 +291,7 @@
                         <th>Minggu 2</th>
                         <th>Minggu 3</th>
                         <th>Minggu 4</th>
+                        <th>Minggu 5</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
@@ -280,18 +310,18 @@
     <script>
     // Konfigurasi
     const USE_DUMMY_DATA = false;
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwZPWVmC6RNLmnZHtHCjptpaylAnae6u11yR8EqxoH6khGHzTcBIOMGPj4mdRCDVvAR1A/exec'; // Ganti dengan URL Anda
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyGabKYtoVjb6lWjix-HR0IiSN8D9nxKA3TnVcFtgzFkFbTX3A4OwO8xyUpw4sAi-nkFw/exec'; // Ganti dengan URL Anda
     
-    // Data dummy
+    // Data dummy yang diperbarui dengan minggu 5
     const dummyData = [
-        { name: "Aang", totalPoints: 45, week1: 10, week2: 15, week3: 12, week4: 8 },
-        { name: "Aceng", totalPoints: 38, week1: 8, week2: 12, week3: 10, week4: 8 },
-        { name: "Adam Pryzbek", totalPoints: 42, week1: 12, week2: 10, week3: 8, week4: 12 },
-        { name: "Adik", totalPoints: 35, week1: 7, week2: 9, week3: 10, week4: 9 },
-        { name: "Adit", totalPoints: 40, week1: 9, week2: 11, week3: 8, week4: 12 },
-        { name: "Aep", totalPoints: 32, week1: 6, week2: 8, week3: 9, week4: 9 },
-        { name: "Agus", totalPoints: 37, week1: 8, week2: 10, week3: 9, week4: 10 },
-        { name: "Ahmad", totalPoints: 28, week1: 5, week2: 7, week3: 8, week4: 8 }
+        { name: "Aang", totalPoints: 55, week1: 10, week2: 15, week3: 12, week4: 8, week5: 10 },
+        { name: "Aceng", totalPoints: 48, week1: 8, week2: 12, week3: 10, week4: 8, week5: 10 },
+        { name: "Adam Pryzbek", totalPoints: 52, week1: 12, week2: 10, week3: 8, week4: 12, week5: 10 },
+        { name: "Adik", totalPoints: 45, week1: 7, week2: 9, week3: 10, week4: 9, week5: 10 },
+        { name: "Adit", totalPoints: 50, week1: 9, week2: 11, week3: 8, week4: 12, week5: 10 },
+        { name: "Aep", totalPoints: 42, week1: 6, week2: 8, week3: 9, week4: 9, week5: 10 },
+        { name: "Agus", totalPoints: 47, week1: 8, week2: 10, week3: 9, week4: 10, week5: 10 },
+        { name: "Ahmad", totalPoints: 38, week1: 5, week2: 7, week3: 8, week4: 8, week5: 10 }
     ];
     
     // Elemen DOM
@@ -300,6 +330,7 @@
     const loadingElement = document.getElementById('loading');
     const errorElement = document.getElementById('error');
     const refreshBtn = document.getElementById('refreshBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
     const lastUpdatedElement = document.getElementById('lastUpdated');
     const footerLastUpdatedElement = document.getElementById('footerLastUpdated');
     
@@ -403,6 +434,7 @@
                 <td>${player.week2}</td>
                 <td>${player.week3}</td>
                 <td>${player.week4}</td>
+                <td>${player.week5}</td>
             `;
             
             tableBody.appendChild(row);
@@ -412,79 +444,80 @@
         errorElement.style.display = 'none';
     }
     
-    // Fungsi untuk mendownload leaderboard sebagai gambar
-function downloadLeaderboard() {
-    // Tampilkan loading state pada tombol
-    const originalText = downloadBtn.innerHTML;
-    downloadBtn.innerHTML = '<span>Mengunduh...</span>';
-    downloadBtn.disabled = true;
-    
-    // Ambil elemen container asli dan clone agar UI asli tidak terganggu
-    const originalContainer = document.querySelector('.container');
-    const clone = originalContainer.cloneNode(true);
-    
-    // Hapus bagian controls (tombol refresh/download + status) dari clone
-    const controls = clone.querySelector('.controls');
-    if (controls) controls.remove();
-    
-    // Pastikan loading / error tidak tampil di clone, dan tabel tampil
-    const loadingClone = clone.querySelector('#loading');
-    if (loadingClone) loadingClone.style.display = 'none';
-    const errorClone = clone.querySelector('#error');
-    if (errorClone) errorClone.style.display = 'none';
-    const tableClone = clone.querySelector('#leaderboardTable');
-    if (tableClone) tableClone.style.display = 'table';
-    
-    // Tempel clone ke DOM secara off-screen supaya dapat di-capture oleh html2canvas
-    const wrapper = document.createElement('div');
-    wrapper.style.position = 'absolute';
-    wrapper.style.left = '-9999px';
-    wrapper.style.top = '0';
-    wrapper.appendChild(clone);
-    document.body.appendChild(wrapper);
-    
-    // Opsi untuk html2canvas
-    const options = {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff'
-    };
-    
-    // Konversi HTML ke canvas (menggunakan clone)
-    html2canvas(clone, options).then(canvas => {
-        const image = canvas.toDataURL('image/jpeg', 0.9);
+    // Fungsi untuk download klasemen sebagai gambar
+    function downloadLeaderboard() {
+        // Tampilkan loading state pada tombol
+        const originalText = downloadBtn.innerHTML;
+        downloadBtn.innerHTML = '<span>Mengunduh...</span>';
+        downloadBtn.disabled = true;
         
-        // Buat link untuk download
-        const link = document.createElement('a');
-        link.href = image;
-        link.download = `Klasemen_WolesFC_${new Date().toISOString().slice(0, 10)}.jpg`;
+        // Ambil elemen container asli dan clone agar UI asli tidak terganggu
+        const originalContainer = document.querySelector('.container');
+        const clone = originalContainer.cloneNode(true);
         
-        // Trigger download
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        // Hapus bagian controls (tombol refresh/download + status) dari clone
+        const controls = clone.querySelector('.controls');
+        if (controls) controls.remove();
         
-        // Hapus wrapper clone dari DOM
-        document.body.removeChild(wrapper);
+        // Pastikan loading / error tidak tampil di clone, dan tabel tampil
+        const loadingClone = clone.querySelector('#loading');
+        if (loadingClone) loadingClone.style.display = 'none';
+        const errorClone = clone.querySelector('#error');
+        if (errorClone) errorClone.style.display = 'none';
+        const tableClone = clone.querySelector('#leaderboardTable');
+        if (tableClone) tableClone.style.display = 'table';
         
-        // Kembalikan tombol ke keadaan semula
-        downloadBtn.innerHTML = originalText;
-        downloadBtn.disabled = false;
-    }).catch(error => {
-        console.error('Error generating image:', error);
-        alert('Terjadi kesalahan saat mengunduh klasemen. Silakan coba lagi.');
+        // Tempel clone ke DOM secara off-screen supaya dapat di-capture oleh html2canvas
+        const wrapper = document.createElement('div');
+        wrapper.style.position = 'absolute';
+        wrapper.style.left = '-9999px';
+        wrapper.style.top = '0';
+        wrapper.appendChild(clone);
+        document.body.appendChild(wrapper);
         
-        // Hapus wrapper clone bila ada
-        if (document.body.contains(wrapper)) document.body.removeChild(wrapper);
+        // Opsi untuk html2canvas
+        const options = {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: '#ffffff'
+        };
         
-        // Kembalikan tombol ke keadaan semula
-        downloadBtn.innerHTML = originalText;
-        downloadBtn.disabled = false;
-    });
-}
-
+        // Konversi HTML ke canvas (menggunakan clone)
+        html2canvas(clone, options).then(canvas => {
+            const image = canvas.toDataURL('image/jpeg', 0.9);
+            
+            // Buat link untuk download
+            const link = document.createElement('a');
+            link.href = image;
+            link.download = `Klasemen_WolesFC_${new Date().toISOString().slice(0, 10)}.jpg`;
+            
+            // Trigger download
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // Hapus wrapper clone dari DOM
+            document.body.removeChild(wrapper);
+            
+            // Kembalikan tombol ke keadaan semula
+            downloadBtn.innerHTML = originalText;
+            downloadBtn.disabled = false;
+        }).catch(error => {
+            console.error('Error generating image:', error);
+            alert('Terjadi kesalahan saat mengunduh klasemen. Silakan coba lagi.');
+            
+            // Hapus wrapper clone bila ada
+            if (document.body.contains(wrapper)) document.body.removeChild(wrapper);
+            
+            // Kembalikan tombol ke keadaan semula
+            downloadBtn.innerHTML = originalText;
+            downloadBtn.disabled = false;
+        });
+    }
+    
     // Event listeners
     refreshBtn.addEventListener('click', loadData);
+    downloadBtn.addEventListener('click', downloadLeaderboard);
     document.addEventListener('DOMContentLoaded', loadData);
     
     // Auto-refresh setiap 5 menit

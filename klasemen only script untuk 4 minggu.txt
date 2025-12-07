@@ -1,0 +1,570 @@
+function doGet() {
+  try {
+    const SHEET_ID = '1YpFTm1FDJnEn1bpUkdMVst09ZHY6kOupZiP3cIVuyZ8';
+    const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName("Leaderboard");
+    
+    if (!sheet) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        error: 'Sheet "Leaderboard" tidak ditemukan'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    const data = sheet.getDataRange().getValues();
+    const leaderboard = data.length > 1 ? data.slice(1).map(row => ({
+      rank: row[0],
+      name: row[1],
+      totalPoints: row[2],
+      week1: row[3],
+      week2: row[4],
+      week3: row[5],
+      week4: row[6]  // HANYA 4 MINGGU
+    })) : [];
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      data: leaderboard,
+      timestamp: new Date().toISOString()
+    })).setMimeType(ContentService.MimeType.JSON);
+      
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: error.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// FUNGSI BARU: Untuk handle semua request dari aplikasi utama
+function doPost(e) {
+  return handleRequest(e);
+}
+
+function handleRequest(e) {
+  try {
+    const parameters = e.postData ? JSON.parse(e.postData.contents) : {};
+    const action = parameters.action;
+    
+    let result;
+    
+    switch(action) {
+      case 'getPlayers':
+        result = getPlayers();
+        break;
+      case 'addPlayer':
+        result = addPlayer(parameters.playerName);
+        break;
+      case 'removePlayer':
+        result = removePlayer(parameters.playerName);
+        break;
+      case 'getWeekData':
+        result = getWeekData(parseInt(parameters.weekNum));
+        break;
+      case 'saveWeekData':
+        result = saveWeekData(
+          parseInt(parameters.weekNum),
+          parameters.weekData
+        );
+        break;
+      case 'getAllData':
+        result = getAllData();
+        break;
+      case 'getLeaderboard':
+        result = getLeaderboard();
+        break;
+      case 'updateLeaderboard':
+        result = updateLeaderboard(parameters.leaderboardData);
+        break;
+      case 'setupSheets':
+        result = setupSheets();
+        break;
+      default:
+        result = { success: false, error: 'Action tidak dikenali: ' + action };
+    }
+    
+    return createCorsResponse(result);
+  } catch (error) {
+    console.error('Error in handleRequest:', error);
+    return createCorsResponse({
+      success: false,
+      error: error.message
+    });
+  }
+}
+
+// FUNGSI: Buat response dengan CORS headers
+function createCorsResponse(data) {
+  const response = ContentService.createTextOutput(JSON.stringify(data));
+  response.setMimeType(ContentService.MimeType.JSON);
+  response.setHeaders({
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type'
+  });
+  return response;
+}
+
+// FUNGSI: Get semua pemain
+function getPlayers() {
+  try {
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    const sheet = ss.getSheetByName("Players");
+    
+    if (!sheet || sheet.getLastRow() < 2) {
+      return { success: true, players: [] };
+    }
+    
+    const data = sheet.getRange(2, 1, sheet.getLastRow()-1, 1).getValues();
+    const players = data
+      .filter(row => row[0] && row[0] !== '')
+      .map(row => row[0].toString().trim())
+      .sort();
+    
+    return { success: true, players: players };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+// FUNGSI: Tambah pemain
+function addPlayer(playerName) {
+  try {
+    if (!playerName || playerName.trim() === '') {
+      return { success: false, error: 'Nama pemain tidak boleh kosong' };
+    }
+    
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    const sheet = ss.getSheetByName("Players");
+    
+    if (!sheet) {
+      setupSheets();
+    }
+    
+    // Cek apakah pemain sudah ada
+    const existingPlayers = getPlayers();
+    if (existingPlayers.players.includes(playerName)) {
+      return { success: false, error: 'Pemain sudah ada' };
+    }
+    
+    sheet.appendRow([playerName, new Date()]);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+// FUNGSI: Hapus pemain
+function removePlayer(playerName) {
+  try {
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    const sheet = ss.getSheetByName("Players");
+    
+    if (!sheet || sheet.getLastRow() < 2) {
+      return { success: false, error: 'Pemain tidak ditemukan' };
+    }
+    
+    const data = sheet.getDataRange().getValues();
+    let found = false;
+    
+    for (let i = data.length - 1; i >= 1; i--) {
+      if (data[i][0] && data[i][0].toString().trim() === playerName) {
+        sheet.deleteRow(i + 1);
+        found = true;
+        break;
+      }
+    }
+    
+    if (!found) {
+      return { success: false, error: 'Pemain tidak ditemukan' };
+    }
+    
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+// FUNGSI: Get data mingguan
+function getWeekData(weekNum) {
+  try {
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    const weeksSheet = ss.getSheetByName("WeeksData");
+    const matchesSheet = ss.getSheetByName("Matches");
+    
+    // Data default
+    const defaultTeams = ['merah', 'kuning', 'hijau', 'biru'].map(color => ({
+      color: color,
+      players: [],
+      gk: null,
+      wins: 0,
+      draws: 0,
+      losses: 0,
+      goalsFor: 0,
+      goalsAgainst: 0,
+      champion: false
+    }));
+    
+    const defaultMatches = [
+      { team1: 'merah', team2: 'biru', score1: null, score2: null, note: '' },
+      { team1: 'kuning', team2: 'hijau', score1: null, score2: null, note: '' },
+      { team1: 'hijau', team2: 'merah', score1: null, score2: null, note: '' },
+      { team1: 'biru', team2: 'kuning', score1: null, score2: null, note: '' },
+      { team1: 'merah', team2: 'kuning', score1: null, score2: null, note: '' },
+      { team1: 'hijau', team2: 'biru', score1: null, score2: null, note: '' }
+    ];
+    
+    if (!weeksSheet || weeksSheet.getLastRow() < 2) {
+      return {
+        success: true,
+        weekData: {
+          date: '',
+          teams: defaultTeams,
+          matches: defaultMatches,
+          cancelOnDay: []
+        }
+      };
+    }
+    
+    const weeksData = weeksSheet.getDataRange().getValues();
+    let matchesData = [];
+    
+    if (matchesSheet && matchesSheet.getLastRow() >= 2) {
+      matchesData = matchesSheet.getDataRange().getValues();
+    }
+    
+    const weekWeeksData = weeksData.filter((row, index) => index > 0 && parseInt(row[0]) === weekNum);
+    const weekMatchesData = matchesData.filter((row, index) => index > 0 && parseInt(row[0]) === weekNum);
+    
+    if (weekWeeksData.length === 0) {
+      return {
+        success: true,
+        weekData: {
+          date: '',
+          teams: defaultTeams,
+          matches: defaultMatches,
+          cancelOnDay: []
+        }
+      };
+    }
+    
+    // Format data tim
+    const teams = ['merah', 'kuning', 'hijau', 'biru'].map(color => {
+      const teamPlayers = weekWeeksData
+        .filter(row => row[2] === color)
+        .map(row => ({
+          player: row[3] ? row[3].toString() : '',
+          isGK: row[4] === true || row[4] === 'TRUE',
+          isCancel: row[5] === true || row[5] === 'TRUE'
+        }))
+        .filter(p => p.player !== '');
+      
+      return {
+        color: color,
+        players: teamPlayers.map(p => p.player),
+        gk: teamPlayers.find(p => p.isGK)?.player || null,
+        wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0,
+        champion: false
+      };
+    });
+    
+    // Format data pertandingan
+    const matches = weekMatchesData.length > 0 
+      ? weekMatchesData.map(row => ({
+          team1: row[2] ? row[2].toString() : '',
+          team2: row[3] ? row[3].toString() : '',
+          score1: row[4] !== '' && row[4] !== null ? parseInt(row[4]) : null,
+          score2: row[5] !== '' && row[5] !== null ? parseInt(row[5]) : null,
+          note: row[6] ? row[6].toString() : ''
+        }))
+      : defaultMatches;
+    
+    // Cari tanggal
+    const dateRow = weekWeeksData[0];
+    const date = dateRow && dateRow[1] ? dateRow[1].toString() : '';
+    
+    // Cancel on day
+    const cancelOnDay = weekWeeksData
+      .filter(row => row[5] === true || row[5] === 'TRUE')
+      .map(row => row[3].toString())
+      .filter(player => player !== '');
+    
+    return {
+      success: true,
+      weekData: {
+        date: date,
+        teams: teams,
+        matches: matches,
+        cancelOnDay: cancelOnDay
+      }
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+// FUNGSI: Save data mingguan
+function saveWeekData(weekNum, weekData) {
+  try {
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    
+    let weeksSheet = ss.getSheetByName("WeeksData");
+    let matchesSheet = ss.getSheetByName("Matches");
+    
+    if (!weeksSheet || !matchesSheet) {
+      setupSheets();
+      weeksSheet = ss.getSheetByName("WeeksData");
+      matchesSheet = ss.getSheetByName("Matches");
+    }
+    
+    // Hapus data lama
+    clearWeekData(weekNum);
+    
+    // Simpan data tim
+    weekData.teams.forEach(team => {
+      team.players.forEach(player => {
+        const isGK = team.gk === player;
+        const isCancel = weekData.cancelOnDay.includes(player);
+        
+        weeksSheet.appendRow([
+          weekNum,
+          weekData.date || '',
+          team.color,
+          player,
+          isGK,
+          isCancel,
+          team.goalsFor || 0,
+          team.goalsAgainst || 0,
+          team.wins || 0,
+          team.draws || 0,
+          team.losses || 0
+        ]);
+      });
+    });
+    
+    // Simpan data pertandingan
+    weekData.matches.forEach((match, index) => {
+      matchesSheet.appendRow([
+        weekNum,
+        index,
+        match.team1,
+        match.team2,
+        match.score1 !== null && match.score1 !== undefined ? match.score1 : '',
+        match.score2 !== null && match.score2 !== undefined ? match.score2 : '',
+        match.note || ''
+      ]);
+    });
+    
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+// FUNGSI: Clear data mingguan
+function clearWeekData(weekNum) {
+  try {
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    const weeksSheet = ss.getSheetByName("WeeksData");
+    const matchesSheet = ss.getSheetByName("Matches");
+    
+    if (weeksSheet && weeksSheet.getLastRow() >= 2) {
+      const weeksData = weeksSheet.getDataRange().getValues();
+      for (let i = weeksData.length - 1; i >= 1; i--) {
+        if (parseInt(weeksData[i][0]) === weekNum) {
+          weeksSheet.deleteRow(i + 1);
+        }
+      }
+    }
+    
+    if (matchesSheet && matchesSheet.getLastRow() >= 2) {
+      const matchesData = matchesSheet.getDataRange().getValues();
+      for (let i = matchesData.length - 1; i >= 1; i--) {
+        if (parseInt(matchesData[i][0]) === weekNum) {
+          matchesSheet.deleteRow(i + 1);
+        }
+      }
+    }
+    
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+// FUNGSI: Get semua data
+function getAllData() {
+  try {
+    const playersResult = getPlayers();
+    if (!playersResult.success) {
+      return playersResult;
+    }
+    
+    const weeksData = {};
+    for (let i = 1; i <= 4; i++) { // HANYA 4 MINGGU
+      const weekResult = getWeekData(i);
+      if (weekResult.success) {
+        weeksData[i] = weekResult.weekData;
+      } else {
+        weeksData[i] = { date: '', teams: [], matches: [], cancelOnDay: [] };
+      }
+    }
+    
+    return {
+      success: true,
+      players: playersResult.players,
+      weeksData: weeksData
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+// FUNGSI: Get leaderboard
+function getLeaderboard() {
+  try {
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    const sheet = ss.getSheetByName("Leaderboard");
+    
+    if (!sheet || sheet.getLastRow() < 2) {
+      return { success: true, leaderboard: [] };
+    }
+    
+    const data = sheet.getRange(2, 1, sheet.getLastRow()-1, 7).getValues(); // 7 KOLOM
+    
+    const leaderboard = data
+      .filter(row => row[0] && row[0] !== '')
+      .map(row => ({
+        rank: parseInt(row[0]),
+        playerName: row[1].toString(),
+        totalPoints: parseInt(row[2]),
+        week1: parseInt(row[3]) || 0,
+        week2: parseInt(row[4]) || 0,
+        week3: parseInt(row[5]) || 0,
+        week4: parseInt(row[6]) || 0  // HANYA 4 MINGGU
+      }));
+    
+    return {
+      success: true,
+      leaderboard: leaderboard
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+// FUNGSI: Update leaderboard
+function updateLeaderboard(leaderboardData) {
+  try {
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    let sheet = ss.getSheetByName("Leaderboard");
+    
+    if (!sheet) {
+      setupSheets();
+      sheet = ss.getSheetByName("Leaderboard");
+    }
+    
+    // Clear existing data
+    if (sheet.getLastRow() > 1) {
+      sheet.getRange(2, 1, sheet.getLastRow()-1, 7).clear(); // 7 KOLOM
+    }
+    
+    // Add new data
+    if (leaderboardData && leaderboardData.length > 0) {
+      const dataToInsert = leaderboardData.map(player => [
+        player.rank || 0,
+        player.playerName || '',
+        player.totalPoints || 0,
+        player.week1 || 0,
+        player.week2 || 0,
+        player.week3 || 0,
+        player.week4 || 0  // HANYA 4 MINGGU
+      ]);
+      
+      if (dataToInsert.length > 0) {
+        sheet.getRange(2, 1, dataToInsert.length, 7).setValues(dataToInsert);
+      }
+    }
+    
+    return { success: true, message: `Updated ${leaderboardData ? leaderboardData.length : 0} players` };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+// FUNGSI: Setup sheets
+function setupSheets() {
+  try {
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    
+    // Players sheet
+    let playersSheet = ss.getSheetByName("Players");
+    if (!playersSheet) {
+      playersSheet = ss.insertSheet("Players");
+      playersSheet.getRange('A1:B1').setValues([['Nama Pemain', 'Date Created']]);
+      playersSheet.getRange('A1:B1').setFontWeight('bold');
+      playersSheet.setColumnWidth(1, 200);
+      playersSheet.setColumnWidth(2, 150);
+    }
+    
+    // WeeksData sheet
+    let weeksSheet = ss.getSheetByName("WeeksData");
+    if (!weeksSheet) {
+      weeksSheet = ss.insertSheet("WeeksData");
+      weeksSheet.getRange('A1:K1').setValues([[
+        'Week', 'Date', 'TeamColor', 'PlayerName', 'IsGK', 'IsCancel', 
+        'GoalsFor', 'GoalsAgainst', 'Wins', 'Draws', 'Losses'
+      ]]);
+      weeksSheet.getRange('A1:K1').setFontWeight('bold');
+    }
+    
+    // Matches sheet
+    let matchesSheet = ss.getSheetByName("Matches");
+    if (!matchesSheet) {
+      matchesSheet = ss.insertSheet("Matches");
+      matchesSheet.getRange('A1:G1').setValues([[
+        'Week', 'MatchIndex', 'Team1', 'Team2', 'Score1', 'Score2', 'Note'
+      ]]);
+      matchesSheet.getRange('A1:G1').setFontWeight('bold');
+    }
+    
+    // Leaderboard sheet - HANYA 4 MINGGU
+    let leaderboardSheet = ss.getSheetByName("Leaderboard");
+    if (!leaderboardSheet) {
+      leaderboardSheet = ss.insertSheet("Leaderboard");
+    }
+    
+    // Update header untuk 4 minggu
+    leaderboardSheet.getRange('A1:G1').setValues([[
+      'Rank', 'Player Name', 'Total Points', 'Week 1', 'Week 2', 'Week 3', 'Week 4'
+    ]]);
+    leaderboardSheet.getRange('A1:G1').setFontWeight('bold');
+    
+    // Set column widths
+    const leaderboardWidths = [80, 200, 120, 100, 100, 100, 100]; // Hanya 7 kolom
+    leaderboardWidths.forEach((width, index) => {
+      leaderboardSheet.setColumnWidth(index + 1, width);
+    });
+    
+    // Hapus sheet default
+    const defaultSheet = ss.getSheetByName('Sheet1');
+    if (defaultSheet) {
+      ss.deleteSheet(defaultSheet);
+    }
+    
+    return { success: true, message: 'Sheets setup completed for 4 weeks' };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+// FUNGSI: Test setup
+function testSetup() {
+  try {
+    const result = setupSheets();
+    console.log('Setup result:', result);
+    return result;
+  } catch (error) {
+    console.error('Error in testSetup:', error);
+    return { success: false, error: error.message };
+  }
+}
